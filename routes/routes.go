@@ -48,7 +48,7 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.CreatePendaftar(db)(w, r)
 	})))
 
-	// 🔹 User: Lihat SEMUA jadwal (pribadi + umum) → tidak perlu tahu jenisnya
+	// 🔹 User: Lihat SEMUA jadwal
 	mux.Handle("/jadwal/user", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetUserJadwalHandler(db)(w, r)
 	})))
