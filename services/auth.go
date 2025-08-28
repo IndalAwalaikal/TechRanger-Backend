@@ -3,25 +3,32 @@ package services
 import (
     "database/sql"
     "time"
+    "log"
 )
 
 func Register(db *sql.DB, username, email, passwordHash, role string) (int, error) {
-    res, err := db.Exec(
-        "INSERT INTO users (username, full_name, email, password, profile_picture, role, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        username, username, email, passwordHash, "default.jpg", role, false,
-    )
+    log.Printf("Mencoba register: username=%s, email=%s, role=%s", username, email, role)
+
+    res, err := db.Exec(`
+        INSERT INTO users 
+        (username, password, role, email, is_verified, full_name, profile_picture) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, username, passwordHash, role, email, false, username, "default.jpg")
+
     if err != nil {
+        log.Printf("ERROR DB: %v", err)
         return 0, err
     }
 
     lastID, err := res.LastInsertId()
     if err != nil {
+        log.Printf("ERROR LastInsertId: %v", err)
         return 0, err
     }
 
+    log.Printf("Register berhasil, ID: %d", lastID)
     return int(lastID), nil
 }
-
 func GetUserByUsername(db *sql.DB, username string) (int, string, string, string, string, error) {
     var id int
     var uname, email, hashed, role string
