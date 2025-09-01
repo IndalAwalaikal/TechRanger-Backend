@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type SoalCreateRequest struct {
     Nomor        int    `json:"nomor" validate:"required,min=1"`
     Pertanyaan   string `json:"pertanyaan" validate:"required,min=10"`
@@ -44,4 +46,13 @@ type SoalResponse struct {
     PilihanB   string `json:"pilihan_b"`
     PilihanC   string `json:"pilihan_c"`
     PilihanD   string `json:"pilihan_d"`
+}
+
+type TestConfigUpdateRequest struct {
+    Judul           *string    `json:"judul,omitempty" validate:"omitempty,min=1"`
+    Deskripsi       *string    `json:"deskripsi,omitempty"`
+    DurasiMenit     *int       `json:"durasi_menit,omitempty" validate:"omitempty,min=1"`
+    WaktuMulai      *time.Time `json:"waktu_mulai,omitempty"`
+    WaktuSelesai    *time.Time `json:"waktu_selesai,omitempty"`
+    Aktif           *bool      `json:"aktif,omitempty"`
 }

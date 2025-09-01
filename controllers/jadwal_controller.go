@@ -64,6 +64,7 @@ func GetUserJadwalHandler(db *sql.DB) http.HandlerFunc {
 				TanggalDiajukan:    j.TanggalDiajukan,
 				JamMulaiDiajukan:   j.JamMulaiDiajukan,
 				JamSelesaiDiajukan: j.JamSelesaiDiajukan,
+				JenisJadwal: 		j.JenisJadwal,
 			})
 		}
 
@@ -154,6 +155,7 @@ func GetAllJadwalHandler(db *sql.DB) http.HandlerFunc {
 			result = append(result, dto.JadwalAdminResponse{
 				IDJadwal:             j.IDJadwal,
 				UserID:               j.UserID,
+				UserNama: 				j.UserNama,
 				PendaftarID:          j.PendaftarID,
 				Tanggal:              j.Tanggal,
 				JamMulai:             j.JamMulai,
@@ -268,7 +270,8 @@ func CreateJadwalHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// ✅ AjukanPerubahanJadwalHandler: User ajukan ubah jadwal pribadinya
+// controllers/jadwal.go
+
 func AjukanPerubahanJadwalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -303,7 +306,7 @@ func AjukanPerubahanJadwalHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if jadwal.UserID != claims.IDUser {
+		if jadwal.JenisJadwal == "pribadi" && jadwal.UserID != claims.IDUser {
 			utils.Error(w, http.StatusForbidden, "Bukan jadwal Anda")
 			return
 		}
@@ -458,6 +461,7 @@ func UpdateJadwalHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+
 func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
@@ -493,7 +497,7 @@ func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if jadwal.UserID != claims.IDUser {
+		if jadwal.JenisJadwal == "pribadi" && jadwal.UserID != claims.IDUser {
 			utils.Error(w, http.StatusForbidden, "Anda tidak berhak mengakses jadwal ini")
 			return
 		}
@@ -515,7 +519,6 @@ func CancelPengajuanPerubahanHandler(db *sql.DB) http.HandlerFunc {
 		})
 	}
 }
-
 func DeleteJadwalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
@@ -560,5 +563,44 @@ func DeleteJadwalHandler(db *sql.DB) http.HandlerFunc {
 			"success": true,
 			"message": "Jadwal berhasil dihapus",
 		})
+	}
+}
+
+func GetUsersForJadwalHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			utils.Error(w, http.StatusMethodNotAllowed, "Hanya metode GET yang diizinkan")
+			return
+		}
+
+		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+		if !ok || claims.Role != "admin" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+			return
+		}
+
+		query := `SELECT id_user, full_name FROM users ORDER BY full_name ASC`
+		rows, err := db.Query(query)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal query user")
+			return
+		}
+		defer rows.Close()
+
+		var users []map[string]interface{}
+		for rows.Next() {
+			var id int
+			var fullName string
+			if err := rows.Scan(&id, &fullName); err != nil {
+				utils.Error(w, http.StatusInternalServerError, "Gagal scan user")
+				return
+			}
+			users = append(users, map[string]interface{}{
+				"id":   id,
+				"nama": fullName,
+			})
+		}
+
+		utils.JSONResponse(w, http.StatusOK, users)
 	}
 }

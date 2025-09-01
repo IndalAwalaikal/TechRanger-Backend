@@ -1,20 +1,18 @@
-// controllers/test.go
 package controllers
 
 import (
-	"database/sql"
 	"cocopen-backend/dto"
 	"cocopen-backend/middleware"
 	"cocopen-backend/models"
 	"cocopen-backend/services"
 	"cocopen-backend/utils"
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// GetUserSoalHandler mengambil semua soal untuk user
 func GetUserSoalHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodGet {
@@ -88,14 +86,15 @@ func GetUserSoalHandler(db *sql.DB) http.HandlerFunc {
         }
 
         utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
-            "soal":         response,
-            "durasi_menit": testConfig.DurasiMenit,
-            "judul":        testConfig.Judul,
-            "deskripsi":    testConfig.Deskripsi,
+            "soal":           response,
+            "durasi_menit":   testConfig.DurasiMenit,
+            "judul":          testConfig.Judul,
+            "deskripsi":      testConfig.Deskripsi,
+            "waktu_mulai":    testConfig.WaktuMulai,
+            "waktu_selesai":  testConfig.WaktuSelesai,
         })
     }
 }
-
 
 func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -127,14 +126,12 @@ func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
         }
         pendaftarID := pendaftar.IDPendaftar
 
-        // Ambil konfigurasi test
         testConfig, err := services.GetTestConfig(db)
         if err != nil {
             utils.Error(w, http.StatusNotFound, "Tes tidak tersedia")
             return
         }
 
-        // Cek apakah sudah pernah ujian
         alreadyTaken, err := services.HasUserTakenTest(db, claims.IDUser, testConfig.IDTest)
         if err != nil {
             utils.Error(w, http.StatusInternalServerError, "Gagal memeriksa riwayat tes")
@@ -145,20 +142,17 @@ func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        // Ambil semua soal untuk penilaian
         soals, err := services.GetAllSoal(db)
         if err != nil {
             utils.Error(w, http.StatusInternalServerError, "Gagal memuat soal untuk penilaian")
             return
         }
 
-        // Mapping jawaban benar
         jawabanBenarMap := make(map[int]string)
         for _, s := range soals {
             jawabanBenarMap[s.IDSoal] = s.JawabanBenar
         }
 
-        // Validasi jawaban
         for idSoal := range req.Jawaban {
             if _, exists := jawabanBenarMap[idSoal]; !exists {
                 utils.Error(w, http.StatusBadRequest, "Soal dengan ID "+strconv.Itoa(idSoal)+" tidak ditemukan")
@@ -166,7 +160,6 @@ func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
             }
         }
 
-        // Hitung skor
         skorBenar := 0
         var jawabans []models.JawabanUser
 
@@ -190,7 +183,7 @@ func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
 
         hasilBaru := models.HasilTest{
             UserID:         claims.IDUser,
-            PendaftarID:    pendaftarID, // ✅ gunakan dari pendaftar.IDPendaftar
+            PendaftarID:    pendaftarID,
             IDTest:         testConfig.IDTest,
             WaktuMulai:     waktuSekarang,
             WaktuSelesai:   &waktuSekarang,
@@ -230,7 +223,6 @@ func SubmitJawabanHandler(db *sql.DB) http.HandlerFunc {
     }
 }
 
-// CreateSoalHandler membuat soal baru (admin)
 func CreateSoalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -273,7 +265,6 @@ func CreateSoalHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// UpdateSoalHandler memperbarui soal (admin)
 func UpdateSoalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
@@ -305,7 +296,6 @@ func UpdateSoalHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Ambil soal dari DB
 		soal, err := services.GetSoalByID(db, idSoal)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -316,7 +306,6 @@ func UpdateSoalHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Update field yang tidak nil
 		if req.Nomor != nil {
 			soal.Nomor = *req.Nomor
 		}
@@ -352,7 +341,6 @@ func UpdateSoalHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// DeleteSoalHandler menghapus soal (admin)
 func DeleteSoalHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodDelete {
@@ -378,7 +366,6 @@ func DeleteSoalHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Cek eksistensi soal
 		_, err = services.GetSoalByID(db, idSoal)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -402,7 +389,6 @@ func DeleteSoalHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetHasilTesUserHandler mendapatkan hasil tes user (user lihat hasil sendiri)
 func GetHasilTesUserHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -454,7 +440,6 @@ func GetHasilTesUserHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetAllHasilTesHandler mengambil semua hasil tes (admin)
 func GetAllHasilTesHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodGet {
@@ -474,27 +459,56 @@ func GetAllHasilTesHandler(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        rows, err := services.GetAllHasilTestByTestID(db, testConfig.IDTest)
+        // 🔁 Query: JOIN dengan pendaftar saja
+        query := `
+            SELECT 
+                ht.id_hasil,
+                ht.user_id,
+                ht.pendaftar_id,
+                p.nama_lengkap AS pendaftar_name,
+                ht.skor_benar,
+                ht.skor_salah,
+                ht.nilai,
+                ht.waktu_mulai,
+                ht.waktu_selesai,
+                ht.durasi_menit
+            FROM hasil_test ht
+            LEFT JOIN pendaftar p ON ht.pendaftar_id = p.id_pendaftar
+            WHERE ht.id_test = ?
+            ORDER BY ht.nilai DESC, ht.waktu_mulai ASC
+        `
+
+        rows, err := db.Query(query, testConfig.IDTest)
         if err != nil {
             utils.Error(w, http.StatusInternalServerError, "Gagal ambil hasil tes: "+err.Error())
             return
         }
         defer rows.Close()
 
-        var hasilList []dto.HasilResponse
+        var hasilList []map[string]interface{}
         for rows.Next() {
-            var h models.HasilTest
-            var waktuSelesai sql.NullTime
-            var durasiMenit sql.NullInt64
+            var (
+                idHasil       int
+                userID        int
+                pendaftarID   sql.NullInt64
+                pendaftarName sql.NullString
+                skorBenar     int
+                skorSalah     int
+                nilai         float64
+                waktuMulai    time.Time
+                waktuSelesai  sql.NullTime
+                durasiMenit   sql.NullInt64
+            )
 
             err := rows.Scan(
-                &h.IDHasil,
-                &h.UserID,
-                &h.PendaftarID,
-                &h.SkorBenar,
-                &h.SkorSalah,
-                &h.Nilai,
-                &h.WaktuMulai,
+                &idHasil,
+                &userID,
+                &pendaftarID,
+                &pendaftarName,
+                &skorBenar,
+                &skorSalah,
+                &nilai,
+                &waktuMulai,
                 &waktuSelesai,
                 &durasiMenit,
             )
@@ -503,31 +517,193 @@ func GetAllHasilTesHandler(db *sql.DB) http.HandlerFunc {
                 return
             }
 
-            var waktuSelesaiStr *string
+            item := map[string]interface{}{
+                "id_hasil":       idHasil,
+                "user_id":        userID,
+                "pendaftar_id":   nil,
+                "pendaftar_name": "Belum daftar",
+                "skor_benar":     skorBenar,
+                "skor_salah":     skorSalah,
+                "nilai":          nilai,
+                "waktu_mulai":    waktuMulai.Format("2006-01-02 15:04:05"),
+                "waktu_selesai":  nil,
+                "durasi_menit":   nil,
+            }
+
+            if pendaftarID.Valid {
+                item["pendaftar_id"] = int(pendaftarID.Int64)
+            }
+            if pendaftarName.Valid && pendaftarName.String != "" {
+                item["pendaftar_name"] = pendaftarName.String
+            }
             if waktuSelesai.Valid {
-                t := waktuSelesai.Time.Format("2006-01-02 15:04:05")
-                waktuSelesaiStr = &t
+                item["waktu_selesai"] = waktuSelesai.Time.Format("2006-01-02 15:04:05")
             }
-
-            var durasi *int
             if durasiMenit.Valid {
-                d := int(durasiMenit.Int64)
-                durasi = &d
+                item["durasi_menit"] = int(durasiMenit.Int64)
             }
 
-            hasilList = append(hasilList, dto.HasilResponse{
-                IDHasil:      h.IDHasil,
-                UserID:       h.UserID,
-                PendaftarID:  h.PendaftarID,
-                SkorBenar:    h.SkorBenar,
-                SkorSalah:    h.SkorSalah,
-                Nilai:        h.Nilai,
-                WaktuMulai:   h.WaktuMulai.Format("2006-01-02 15:04:05"),
-                WaktuSelesai: waktuSelesaiStr,
-                DurasiMenit:  durasi,
-            })
+            hasilList = append(hasilList, item)
         }
 
         utils.JSONResponse(w, http.StatusOK, hasilList)
+    }
+}
+
+func GetAllSoalAdminHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			utils.Error(w, http.StatusMethodNotAllowed, "Hanya GET yang diizinkan")
+			return
+		}
+
+		claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+		if !ok || claims.Role != "admin" {
+			utils.Error(w, http.StatusForbidden, "Akses ditolak")
+			return
+		}
+
+		soals, err := services.GetAllSoal(db)
+		if err != nil {
+			utils.Error(w, http.StatusInternalServerError, "Gagal ambil soal: "+err.Error())
+			return
+		}
+
+		var response []dto.SoalResponse
+		for _, s := range soals {
+			response = append(response, dto.SoalResponse{
+				IDSoal:     s.IDSoal,
+				Nomor:      s.Nomor,
+				Pertanyaan: s.Pertanyaan,
+				PilihanA:   s.PilihanA,
+				PilihanB:   s.PilihanB,
+				PilihanC:   s.PilihanC,
+				PilihanD:   s.PilihanD,
+			})
+		}
+
+		utils.JSONResponse(w, http.StatusOK, response)
+	}
+}
+
+func UpdateTestConfigHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+        if !ok || claims.Role != "admin" {
+            utils.Error(w, http.StatusForbidden, "Akses ditolak")
+            return
+        }
+
+        switch r.Method {
+        case http.MethodGet:
+            // 🔹 Ambil konfigurasi saat ini
+            testConfig, err := services.GetTestConfig(db)
+            if err != nil {
+                if err == sql.ErrNoRows {
+                    utils.Error(w, http.StatusNotFound, "Konfigurasi tes belum dibuat")
+                    return
+                }
+                utils.Error(w, http.StatusInternalServerError, "Gagal ambil konfigurasi: "+err.Error())
+                return
+            }
+
+            utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+                "id_test":       testConfig.IDTest,
+                "judul":         testConfig.Judul,
+                "deskripsi":     testConfig.Deskripsi,
+                "durasi_menit":  testConfig.DurasiMenit,
+                "waktu_mulai":   testConfig.WaktuMulai,
+                "waktu_selesai": testConfig.WaktuSelesai,
+                "aktif":         testConfig.Aktif,
+            })
+
+        case http.MethodPut:
+            // 🔹 Update konfigurasi
+            var req dto.TestConfigUpdateRequest
+            if err := utils.ParseAndValidate(r, &req); err != nil {
+                utils.Error(w, http.StatusBadRequest, err.Error())
+                return
+            }
+
+            existing, _ := services.GetTestConfig(db)
+
+            config := models.Test{
+                Judul:       "Tes Seleksi",
+                DurasiMenit: 30,
+                Aktif:       true,
+            }
+
+            if existing != nil {
+                config.IDTest = existing.IDTest
+            }
+
+            if req.Judul != nil {
+                config.Judul = *req.Judul
+            }
+            if req.Deskripsi != nil {
+                config.Deskripsi = req.Deskripsi
+            }
+            if req.DurasiMenit != nil {
+                config.DurasiMenit = *req.DurasiMenit
+            }
+            if req.WaktuMulai != nil {
+                config.WaktuMulai = req.WaktuMulai
+            }
+            if req.WaktuSelesai != nil {
+                config.WaktuSelesai = req.WaktuSelesai
+            }
+            if req.Aktif != nil {
+                config.Aktif = *req.Aktif
+            }
+
+            err := services.UpsertTestConfig(db, config)
+            if err != nil {
+                utils.Error(w, http.StatusInternalServerError, "Gagal simpan konfigurasi: "+err.Error())
+                return
+            }
+
+            utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+                "success": true,
+                "message": "Konfigurasi tes berhasil disimpan",
+            })
+
+        default:
+            utils.Error(w, http.StatusMethodNotAllowed, "Hanya GET dan PUT yang diizinkan")
+        }
+    }
+}
+
+func GetTestConfigHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != http.MethodGet {
+            utils.Error(w, http.StatusMethodNotAllowed, "Hanya GET yang diizinkan")
+            return
+        }
+
+        claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+        if !ok || claims.Role != "admin" {
+            utils.Error(w, http.StatusForbidden, "Akses ditolak")
+            return
+        }
+
+        testConfig, err := services.GetTestConfig(db)
+        if err != nil {
+            if err == sql.ErrNoRows {
+                utils.Error(w, http.StatusNotFound, "Konfigurasi tes belum dibuat")
+                return
+            }
+            utils.Error(w, http.StatusInternalServerError, "Gagal ambil konfigurasi: "+err.Error())
+            return
+        }
+
+        utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+            "id_test":       testConfig.IDTest,
+            "judul":         testConfig.Judul,
+            "deskripsi":     testConfig.Deskripsi,
+            "durasi_menit":  testConfig.DurasiMenit,
+            "waktu_mulai":   testConfig.WaktuMulai,
+            "waktu_selesai": testConfig.WaktuSelesai,
+            "aktif":         testConfig.Aktif,
+        })
     }
 }

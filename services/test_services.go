@@ -1,8 +1,8 @@
 package services
 
 import (
-	"database/sql"
 	"cocopen-backend/models"
+	"database/sql"
 )
 
 func CreateSoal(db *sql.DB, soal models.SoalTest) error {
@@ -331,13 +331,69 @@ func UpdateHasilTest(db *sql.DB, hasil *models.HasilTest) error {
 
 func GetAllHasilTestByTestID(db *sql.DB, idTest int) (*sql.Rows, error) {
     query := `
-        SELECT 
-            id_hasil, user_id, pendaftar_id,
-            skor_benar, skor_salah, nilai,
-            waktu_mulai, waktu_selesai
-        FROM hasil_test
-        WHERE id_test = ?
-        ORDER BY nilai DESC, waktu_mulai ASC
-    `
+    SELECT 
+        id_hasil, user_id, pendaftar_id,
+        skor_benar, skor_salah, nilai,
+        waktu_mulai, waktu_selesai,
+        durasi_menit
+    FROM hasil_test
+    WHERE id_test = ?
+    ORDER BY nilai DESC, waktu_mulai ASC
+`
     return db.Query(query, idTest)
+}
+
+
+func UpsertTestConfig(db *sql.DB, config models.Test) error {
+    existing, err := GetTestConfig(db)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return CreateTestConfig(db, config)
+        }
+        return err
+    }
+
+    query := `
+        UPDATE test 
+        SET 
+            judul = ?, 
+            deskripsi = ?, 
+            durasi_menit = ?, 
+            waktu_mulai = ?, 
+            waktu_selesai = ?, 
+            aktif = ?, 
+            updated_at = CURRENT_TIMESTAMP 
+        WHERE id_test = ?
+    `
+
+    _, err = db.Exec(
+        query,
+        config.Judul,
+        config.Deskripsi,
+        config.DurasiMenit,
+        config.WaktuMulai,
+        config.WaktuSelesai,
+        config.Aktif,
+        existing.IDTest,
+    )
+    return err
+}
+
+
+func CreateTestConfig(db *sql.DB, config models.Test) error {
+    query := `
+        INSERT INTO test 
+        (judul, deskripsi, durasi_menit, waktu_mulai, waktu_selesai, aktif) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `
+    _, err := db.Exec(
+        query,
+        config.Judul,
+        config.Deskripsi,
+        config.DurasiMenit,
+        config.WaktuMulai,
+        config.WaktuSelesai,
+        config.Aktif,
+    )
+    return err
 }

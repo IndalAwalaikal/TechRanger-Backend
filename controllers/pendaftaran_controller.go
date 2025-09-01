@@ -280,3 +280,27 @@ func DeletePendaftar(db *sql.DB) http.HandlerFunc {
 		})
 	}
 }
+
+func GetMyPendaftar(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != http.MethodGet {
+            utils.Error(w, http.StatusMethodNotAllowed, "Hanya metode GET yang diizinkan")
+            return
+        }
+
+        claims, ok := r.Context().Value(middleware.UserContextKey).(*utils.Claims)
+        if !ok {
+            utils.Error(w, http.StatusUnauthorized, "Akses ditolak")
+            return
+        }
+
+        pendaftarList, err := services.GetPendaftarByUserID(db, claims.IDUser)
+        if err != nil {
+            utils.Error(w, http.StatusInternalServerError, "Gagal mengambil data pendaftaran")
+            return
+        }
+
+        // Kirim response
+        utils.JSONResponse(w, http.StatusOK, pendaftarList)
+    }
+}

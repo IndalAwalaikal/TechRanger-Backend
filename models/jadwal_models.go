@@ -28,4 +28,5 @@ type Jadwal struct {
     // Relasi (opsional)
     User      *User      `json:"user,omitempty"`
     Pendaftar *Pendaftar `json:"pendaftar,omitempty"`
+    UserNama  string     `json:"user_nama,omitempty"`
 }

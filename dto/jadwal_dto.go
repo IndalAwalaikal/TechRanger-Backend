@@ -5,6 +5,8 @@ import "time"
 
 type JadwalUserResponse struct {
     IDJadwal                 int        `json:"id_jadwal"`
+    UserID                   int        `json:"user_id"` 
+    UserNama                 string     `json:"user_nama,omitempty"`
     Tanggal                  time.Time  `json:"tanggal"`
     JamMulai                 string     `json:"jam_mulai"`
     JamSelesai               string     `json:"jam_selesai"`
@@ -16,6 +18,7 @@ type JadwalUserResponse struct {
     TanggalDiajukan          *time.Time `json:"tanggal_diajukan,omitempty"`
     JamMulaiDiajukan         *string    `json:"jam_mulai_diajukan,omitempty"`
     JamSelesaiDiajukan       *string    `json:"jam_selesai_diajukan,omitempty"`
+    JenisJadwal              string     `json:"jenis_jadwal"`
 }
 
 type JadwalAdminResponse struct {

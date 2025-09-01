@@ -78,6 +78,10 @@ func Setup(db *sql.DB) http.Handler {
 
 	// === Protected Routes - Admin Role ===
 	// Pendaftar
+	mux.Handle("/pendaftar/my", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.GetMyPendaftar(db)(w, r)
+	})))
+
 	mux.Handle("/pendaftar/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetAllPendaftar(db)(w, r)
 	})))
@@ -111,6 +115,10 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.GetAllJadwalHandler(db)(w, r)
 	})))
 
+	mux.Handle("/users", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.GetUsersForJadwalHandler(db)(w, r)
+	})))
+
 	// GET /jadwal?id=123
 	mux.Handle("/jadwal", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetJadwalByIDHandler(db)(w, r)
@@ -128,6 +136,14 @@ func Setup(db *sql.DB) http.Handler {
 	})))
 	mux.Handle("/test/hasil", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetAllHasilTesHandler(db)(w, r)
+	})))
+
+	mux.Handle("/test/admin/soal", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.GetAllSoalAdminHandler(db)(w, r)
+	})))
+
+	mux.Handle("/test/config", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
+    	controllers.UpdateTestConfigHandler(db)(w, r)
 	})))
 
 	// 🔹 Pengumuman 
