@@ -3,6 +3,7 @@ package services
 
 import (
 	"cocopen-backend/models"
+    "cocopen-backend/utils"
 	"database/sql"
 )
 
@@ -64,9 +65,16 @@ func GetLatestPendaftarByUserID(db *sql.DB, userID int) (*models.Pendaftar, erro
 }
 
 func GetAllPendaftar(db *sql.DB) (*sql.Rows, error) {
-    return db.Query(
-        "SELECT id_pendaftar, nama_lengkap, asal_kampus, prodi, semester, no_wa, domisili, alamat_sekarang, tinggal_dengan, alasan_masuk, pengetahuan_coconut, foto_path, created_at, updated_at, status FROM pendaftar ORDER BY created_at DESC",
-    )
+    query := `
+        SELECT 
+            id_pendaftar, nama_lengkap, asal_kampus, prodi, semester,
+            no_wa, domisili, alamat_sekarang, tinggal_dengan,
+            alasan_masuk, pengetahuan_coconut, foto_path,
+            created_at, updated_at, status, user_id
+        FROM pendaftar
+        ORDER BY created_at DESC
+    `
+    return db.Query(query)
 }
 
 func GetPendaftarByID(db *sql.DB, idPendaftar int) (models.Pendaftar, error) {
@@ -99,10 +107,44 @@ func UpdatePendaftar(db *sql.DB, idPendaftar int, status string) error {
 
 
 func DeletePendaftar(db *sql.DB, idPendaftar int) error {
-    _, err := db.Exec("DELETE FROM pendaftar WHERE id_pendaftar = ?", idPendaftar)
-    return err
-}
+    tx, err := db.Begin()
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback()
 
+    _, err = tx.Exec("DELETE FROM hasil_test WHERE pendaftar_id = ?", idPendaftar)
+    if err != nil {
+        return err
+    }
+
+    var exists int
+    err = tx.QueryRow("SELECT 1 FROM pendaftar WHERE id_pendaftar = ?", idPendaftar).Scan(&exists)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return sql.ErrNoRows
+        }
+        return err
+    }
+
+    var fotoPath string
+    err = tx.QueryRow("SELECT foto_path FROM pendaftar WHERE id_pendaftar = ?", idPendaftar).Scan(&fotoPath)
+    if err == nil && fotoPath != "" {
+        utils.HapusFoto(utils.FotoPendaftarPath, fotoPath)
+    }
+
+    result, err := tx.Exec("DELETE FROM pendaftar WHERE id_pendaftar = ?", idPendaftar)
+    if err != nil {
+        return err
+    }
+
+    rowsAffected, _ := result.RowsAffected()
+    if rowsAffected == 0 {
+        return sql.ErrNoRows
+    }
+
+    return tx.Commit()
+}
 
 func GetPendaftarByUserID(db *sql.DB, userID int) ([]models.Pendaftar, error) {
     query := `

@@ -145,20 +145,44 @@ func GetAllPendaftar(db *sql.DB) http.HandlerFunc {
 		}
 		defer rows.Close()
 
-		var result []models.Pendaftar
+		var result []map[string]interface{}
 		for rows.Next() {
 			var p models.Pendaftar
 			err := rows.Scan(
 				&p.IDPendaftar, &p.NamaLengkap, &p.AsalKampus, &p.Prodi, &p.Semester,
 				&p.NoWA, &p.Domisili, &p.AlamatSekarang, &p.TinggalDengan,
 				&p.AlasanMasuk, &p.PengetahuanCoconut, &p.FotoPath,
-				&p.CreatedAt, &p.UpdatedAt, &p.Status,
+				&p.CreatedAt, &p.UpdatedAt, &p.Status, &p.UserID,
 			)
 			if err != nil {
 				utils.Error(w, http.StatusInternalServerError, "Gagal membaca data pendaftar")
 				return
 			}
-			result = append(result, p)
+
+			fotoURL := ""
+			if p.FotoPath != "" {
+				fotoURL = "/uploads/foto_pendaftar/" + p.FotoPath
+			}
+
+			result = append(result, map[string]interface{}{
+				"id_pendaftar":         p.IDPendaftar,
+				"nama_lengkap":         p.NamaLengkap,
+				"asal_kampus":          p.AsalKampus,
+				"prodi":                p.Prodi,
+				"semester":             p.Semester,
+				"no_wa":                p.NoWA,
+				"domisili":             p.Domisili,
+				"alamat_sekarang":      p.AlamatSekarang,
+				"tinggal_dengan":       p.TinggalDengan,
+				"alasan_masuk":         p.AlasanMasuk,
+				"pengetahuan_coconut":  p.PengetahuanCoconut,
+				"foto_path":            p.FotoPath,
+				"foto_url":             fotoURL, // 👈 ini yang frontend butuhkan
+				"created_at":           p.CreatedAt,
+				"updated_at":           p.UpdatedAt,
+				"status":               p.Status,
+				"user_id":              p.UserID,
+			})
 		}
 
 		utils.JSONResponse(w, http.StatusOK, result)
