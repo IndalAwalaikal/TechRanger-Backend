@@ -136,11 +136,13 @@ func CreateJadwal(db *sql.DB, jadwal models.Jadwal) error {
 
 	query := `
 		INSERT INTO jadwal (
-			user_id, pendaftar_id, tanggal, jam_mulai, jam_selesai, 
-			tempat, konfirmasi_jadwal, catatan, pengajuan_perubahan, 
-			alasan_perubahan, jenis_jadwal
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			user_id, pendaftar_id, tanggal, jam_mulai, jam_selesai,
+			tempat, konfirmasi_jadwal, catatan, pengajuan_perubahan,
+			alasan_perubahan, tanggal_diajukan, jam_mulai_diajukan,
+			jam_selesai_diajukan, jenis_jadwal
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
+
 	_, err := db.Exec(
 		query,
 		jadwal.UserID,
@@ -153,6 +155,9 @@ func CreateJadwal(db *sql.DB, jadwal models.Jadwal) error {
 		jadwal.Catatan,
 		jadwal.PengajuanPerubahan,
 		jadwal.AlasanPerubahan,
+		jadwal.TanggalDiajukan,
+		jadwal.JamMulaiDiajukan,
+		jadwal.JamSelesaiDiajukan,
 		jadwal.JenisJadwal,
 	)
 	return err
@@ -308,4 +313,14 @@ func DeleteJadwal(db *sql.DB, idJadwal int) error {
 	query := `DELETE FROM jadwal WHERE id_jadwal = ?`
 	_, err := db.Exec(query, idJadwal)
 	return err
+}
+
+func UserExists(db *sql.DB, userID int) (bool, error) {
+	var count int
+	query := "SELECT COUNT(1) FROM users WHERE id_user = ?"
+	err := db.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

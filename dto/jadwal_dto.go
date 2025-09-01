@@ -42,13 +42,14 @@ type JadwalAdminResponse struct {
 }
 
 type JadwalCreateRequest struct {
+    UserID      *int    `json:"user_id,omitempty"`
     PendaftarID *int    `json:"pendaftar_id,omitempty"`
     Tanggal     string  `json:"tanggal" validate:"required,datetime=2006-01-02"`
     JamMulai    string  `json:"jam_mulai" validate:"required,datetime=15:04:05"`
     JamSelesai  string  `json:"jam_selesai" validate:"required,datetime=15:04:05"`
     Tempat      string  `json:"tempat" validate:"required,min=3,max=255"`
     Catatan     *string `json:"catatan,omitempty"`
-    JenisJadwal string  `json:"jenis_jadwal,omitempty" validate:"omitempty,oneof=pribadi umum"`
+    JenisJadwal *string  `json:"jenis_jadwal,omitempty" validate:"omitempty,oneof=pribadi umum"`
 }
 
 type JadwalUpdateRequest struct {
