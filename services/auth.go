@@ -49,10 +49,49 @@ func GetUserByEmail(db *sql.DB, email string) (int, error) {
 }
 
 func DeleteUnverifiedUsersBefore(db *sql.DB, cutoff time.Time) error {
-    _, err := db.Exec(`
-        DELETE FROM users 
-        WHERE is_verified = FALSE 
-          AND created_at < ?
+    tx, err := db.Begin()
+    if err != nil {
+        log.Printf("Gagal memulai transaksi: %v", err)
+        return err
+    }
+    defer tx.Rollback()
+
+    _, err = tx.Exec(`
+        DELETE pr FROM password_resets pr
+        INNER JOIN users u ON pr.user_id = u.id_user
+        WHERE u.is_verified = 0 AND u.created_at < ?
     `, cutoff)
-    return err
+    if err != nil {
+        log.Printf("Gagal hapus dari password_resets: %v", err)
+        return err
+    }
+
+    _, err = tx.Exec(`
+        DELETE evt FROM email_verification_tokens evt
+        INNER JOIN users u ON evt.user_id = u.id_user
+        WHERE u.is_verified = 0 AND u.created_at < ?
+    `, cutoff)
+    if err != nil {
+        log.Printf("Gagal hapus dari email_verification_tokens: %v", err)
+        return err
+    }
+
+    result, err := tx.Exec(`
+        DELETE FROM users 
+        WHERE is_verified = 0 AND created_at < ?
+    `, cutoff)
+    if err != nil {
+        log.Printf("Gagal hapus dari users: %v", err)
+        return err
+    }
+
+    rowsAffected, _ := result.RowsAffected()
+    log.Printf("Berhasil hapus %d akun belum diverifikasi", rowsAffected)
+
+    if err = tx.Commit(); err != nil {
+        log.Printf("Gagal commit transaksi: %v", err)
+        return err
+    }
+
+    return nil
 }
