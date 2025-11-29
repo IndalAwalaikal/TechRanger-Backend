@@ -36,3 +36,4 @@ COCOPEN adalah aplikasi web yang dirancang untuk memfasilitasi pendaftaran calon
 - Frontend Dev: [Saudah, Nawat]
 - Backend Dev: [Morgan, Puma, Keisya, Bayin]
 - Sistem Engineer: [Syan, Tege, Udin, Fajrul, Dedes, Dlka]
+# TechRanger-Backend
