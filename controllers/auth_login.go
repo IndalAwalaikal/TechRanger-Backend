@@ -1,48 +1,67 @@
+// controllers/login.go
 package controllers
 
 import (
-    "cocopen-backend/dto"
-    "cocopen-backend/services"
-    "cocopen-backend/utils"
-    "database/sql"
-    "encoding/json"
-    "net/http"
+	"cocopen-backend/dto"
+	"cocopen-backend/utils"
+	"encoding/json"
+	"net/http"
+	"os"
 )
 
-func Login(db *sql.DB) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != http.MethodPost {
-            utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
-            return
-        }
+func Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		utils.Error(w, http.StatusMethodNotAllowed, "Metode tidak diizinkan")
+		return
+	}
 
-        var req dto.LoginRequest
-        if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-            utils.Error(w, http.StatusBadRequest, "Format JSON tidak valid")
-            return
-        }
+	var req dto.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Format JSON tidak valid")
+		return
+	}
 
-        user, hashed, err := services.Login(db, req.Username)
-        if err != nil {
-            if err == sql.ErrNoRows {
-                utils.Error(w, http.StatusNotFound, "Username tidak ditemukan")
-                return
-            }
-            panic(err)
-        }
+	staticUsername := os.Getenv("STATIC_USERNAME")
+	staticPassword := os.Getenv("STATIC_PASSWORD")
 
-        if !utils.CheckPassword(req.Password, hashed) {
-            utils.Error(w, http.StatusUnauthorized, "Password salah")
-            return
-        }
+	// Validasi env tersedia
+	if staticUsername == "" || staticPassword == "" {
+		utils.Error(w, http.StatusInternalServerError, "Kredensial admin belum dikonfigurasi")
+		return
+	}
 
-        token := utils.GenerateToken(user.IDUser, user.Username, user.FullName, user.Role, user.ProfilePicture)
+	// Cek kredensial
+	if req.Username != staticUsername || req.Password != staticPassword {
+		utils.Error(w, http.StatusUnauthorized, "Username atau password salah")
+		return
+	}
 
-        utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
-            "success": true,
-            "status":  http.StatusOK,
-            "message": "Anda berhasil login",
-            "token":   token,
-        })
-    }
+	// 🔑 Eksplisit: hanya role "admin" yang diizinkan
+	role := "admin"
+	userID := 1
+	fullName := "Administrator"
+	username := staticUsername
+	profilePicture := ""
+
+	// (Opsional) Tambahkan validasi role jika kamu punya logika dinamis nanti
+	if role != "admin" {
+		utils.Error(w, http.StatusForbidden, "Akses ditolak: hanya admin yang diizinkan")
+		return
+	}
+
+	token := utils.GenerateToken(userID, username, fullName, role, profilePicture)
+
+	utils.JSONResponse(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"status":  http.StatusOK,
+		"message": "Login berhasil",
+		"token":   token,
+		"user": map[string]interface{}{
+			"id":              userID,
+			"username":        username,
+			"full_name":       fullName,
+			"role":            role,
+			"profile_picture": profilePicture,
+		},
+	})
 }

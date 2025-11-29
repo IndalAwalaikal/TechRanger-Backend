@@ -31,7 +31,7 @@ func main() {
         port = os.Getenv("SERVER_PORT")
     }
     if port == "" {
-        port = "8080"
+        port = "5012"
     }
 
     fmt.Printf("Server berjalan di port %s\n", port)

@@ -19,9 +19,7 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.Register(db)(w, r)
 	})
 
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		controllers.Login(db)(w, r)
-	})
+	mux.HandleFunc("/login", controllers.Login)
 
 	mux.HandleFunc("/forgot-password", func(w http.ResponseWriter, r *http.Request) {
 		controllers.ForgotPassword(db)(w, r)
@@ -44,9 +42,8 @@ func Setup(db *sql.DB) http.Handler {
 		controllers.UpdateProfile(db)(w, r)
 	})))
 
-	mux.Handle("/pendaftar/create", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
-		controllers.CreatePendaftar(db)(w, r)
-	})))
+	mux.HandleFunc("/pendaftar/create", controllers.CreatePendaftar(db))
+
 
 	// 🔹 User: Lihat SEMUA jadwal
 	mux.Handle("/jadwal/user", middleware.Auth(middleware.Role("user")(func(w http.ResponseWriter, r *http.Request) {
@@ -82,9 +79,7 @@ func Setup(db *sql.DB) http.Handler {
     	controllers.GetMyPendaftar(db)(w, r)
 	})))
 
-	mux.Handle("/pendaftar/all", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
-		controllers.GetAllPendaftar(db)(w, r)
-	})))
+	mux.HandleFunc("/pendaftar/all", controllers.GetAllPendaftar(db))
 
 	mux.Handle("/pendaftar/", middleware.Auth(middleware.Role("admin")(func(w http.ResponseWriter, r *http.Request) {
 		controllers.GetPendaftarByID(db)(w, r)
